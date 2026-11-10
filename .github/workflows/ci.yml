@@ -1,0 +1,43 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.9"
+
+      - name: fmt
+        run: terraform fmt -recursive -check
+
+      - name: init and validate (module)
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - name: tests (mocked provider, no Azure credentials needed)
+        run: terraform test
+
+      - name: validate example
+        working-directory: examples/basic
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+
+      - name: tflint
+        run: |
+          tflint --init
+          tflint --recursive
